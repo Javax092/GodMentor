@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { startOfMonth } from "date-fns";
 import { apiError } from "@/lib/api";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -21,11 +22,12 @@ export async function POST(request: Request) {
   try {
     const session = await requireSession();
     const body = monthlyReviewSchema.parse(await request.json());
+    const month = startOfMonth(new Date(body.month));
     const review = await prisma.monthlyReview.upsert({
       where: {
         userId_month: {
           userId: session.userId,
-          month: new Date(body.month)
+          month
         }
       },
       update: {
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
       },
       create: {
         userId: session.userId,
-        month: new Date(body.month),
+        month,
         biggestGrowth: body.biggestGrowth,
         completedGoals: body.completedGoals,
         helpfulHabits: body.helpfulHabits,

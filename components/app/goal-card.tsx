@@ -13,7 +13,7 @@ export function GoalCard({ goal }: { goal: Goal }) {
   const priorityVariant = goal.priority === "HIGH" ? "warning" : goal.priority === "LOW" ? "secondary" : "default";
 
   return (
-    <Card>
+    <Card className="border-white/10">
       <CardContent className="space-y-5 p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-3">
@@ -25,6 +25,9 @@ export function GoalCard({ goal }: { goal: Goal }) {
             <div>
               <h3 className="text-lg font-semibold tracking-tight text-foreground">{goal.title}</h3>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{goal.description}</p>
+              <p className="mt-2 text-sm font-medium text-cyan-100/90">
+                {goal.progress > 0 ? "Toda meta precisa de uma próxima ação." : "Sem próxima ação, a meta vira desejo."}
+              </p>
             </div>
           </div>
           <div className="self-start">

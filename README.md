@@ -1,33 +1,28 @@
 # Evolua AI
 
-Evolua AI e um SaaS full-stack para diario pessoal inteligente, metas, revisoes e base de mentor com IA. O projeto usa Next.js App Router, TypeScript, Tailwind, componentes estilo shadcn/ui, Prisma e PostgreSQL.
+Evolua AI e um SaaS full-stack para diario pessoal inteligente, metas, revisoes e acompanhamento com IA. O projeto usa Next.js App Router, TypeScript, Prisma, Neon PostgreSQL e deploy na Vercel.
 
 ## Stack
 
 - Next.js 15 com App Router
 - TypeScript
 - Tailwind CSS
-- shadcn/ui style components
-- lucide-react
 - Prisma ORM
-- PostgreSQL
-- Autenticacao com email e senha usando JWT em cookie HTTP-only
+- Neon PostgreSQL
+- JWT em cookie HTTP-only
 - API routes do Next.js
-- Estrutura pronta para integracao futura com OpenAI com fallback local
 
 ## Funcionalidades
 
-- Landing page premium e responsiva
 - Registro, login e logout
 - Middleware protegendo `/dashboard`, `/diario`, `/metas`, `/revisoes` e `/configuracoes`
-- Dashboard com streak, metas concluidas, nota media, progresso mensal e insight
-- Diario com CRUD real
-- Metas com CRUD, filtros por periodo e categoria, status e progresso
+- Dashboard com dados agregados do usuario
+- CRUD de diario
+- CRUD de metas
 - Revisoes semanais e mensais
-- Endpoints de IA com fallback local persistindo insights
+- Endpoints de IA com fallback local
 - Validacao com Zod
 - Hash de senha com bcryptjs
-- Isolamento de dados por `userId`
 
 ## Estrutura
 
@@ -37,24 +32,52 @@ app/
   (app)/
   api/
 components/
-  app/
-  forms/
-  ui/
 lib/
 prisma/
 ```
 
-## Setup local
+## Variaveis de ambiente
 
-1. Copie `.env.example` para `.env`.
-2. Preencha:
+O projeto usa duas URLs para o Neon:
+
+- `DATABASE_URL`: runtime da aplicacao e producao na Vercel. Deve usar o host com `-pooler`.
+- `DIRECT_URL`: migrations e comandos Prisma que precisam conexao direta. Deve usar o host sem `-pooler`.
+
+Exemplo correto:
 
 ```env
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
-JWT_SECRET="uma-chave-longa-e-segura"
+DATABASE_URL="postgresql://USER:PASSWORD@ep-xxxx-pooler.region.aws.neon.tech/neondb?sslmode=require&connect_timeout=60"
+DIRECT_URL="postgresql://USER:PASSWORD@ep-xxxx.region.aws.neon.tech/neondb?sslmode=require&connect_timeout=60"
+JWT_SECRET="replace-with-a-long-random-secret"
 OPENAI_API_KEY=""
 ```
 
+Regras importantes:
+
+- `DATABASE_URL` sempre com `-pooler`
+- `DIRECT_URL` sempre sem `-pooler`
+- manter `sslmode=require`
+- manter `connect_timeout=60`
+- nao usar `DATABASE_URL` pooled para `migrate dev`
+
+## Prisma
+
+O datasource atual esta configurado para separar runtime e migrations:
+
+```prisma
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+```
+
+O Prisma tambem carrega `.env` via [prisma.config.ts](/home/limax44/trilha092/prisma.config.ts:1).
+
+## Setup local
+
+1. Copie `.env.example` para `.env`.
+2. Preencha `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET` e `OPENAI_API_KEY`.
 3. Instale dependencias:
 
 ```bash
@@ -67,7 +90,7 @@ npm install
 npx prisma generate
 ```
 
-5. Rode a migracao de desenvolvimento:
+5. Rode as migrations locais:
 
 ```bash
 npx prisma migrate dev
@@ -85,82 +108,88 @@ npm run prisma:seed
 npm run dev
 ```
 
-## Credencial demo do seed
-
-- Email: `demo@evolua.ai`
-- Senha: `12345678`
-
 ## Scripts
 
-- `npm install`
-- `npx prisma generate`
-- `npx prisma migrate dev`
-- `npm run prisma:seed`
 - `npm run dev`
 - `npm run build`
+- `npm run start`
+- `npm run prisma:generate`
+- `npm run prisma:migrate`
+- `npm run prisma:migrate:deploy`
+- `npm run prisma:deploy`
+- `npm run prisma:seed`
 
-## Neon PostgreSQL
+## Migrations
 
-1. Crie um projeto no Neon.
-2. Copie a connection string do banco.
-3. Cole em `DATABASE_URL`.
-4. Mantenha `sslmode=require`.
-5. Rode `npx prisma migrate dev` localmente.
-6. Em producao, use `npx prisma migrate deploy`.
+Fluxo recomendado:
 
-Exemplo:
+- Desenvolvimento: `npx prisma migrate dev`
+- Producao: `npx prisma migrate deploy`
 
-```env
-DATABASE_URL="postgresql://USER:PASSWORD@ep-xxxx.sa-east-1.aws.neon.tech/neondb?sslmode=require"
+As migrations versionadas ficam em `prisma/migrations`. Para este projeto, existem migrations de sincronizacao do schema e um fallback SQL manual em [prisma/sql/20260506_add_subscription_tier_fallback.sql](/home/limax44/trilha092/prisma/sql/20260506_add_subscription_tier_fallback.sql:1).
+
+Se for necessario aplicar o fallback manualmente:
+
+```sql
+ALTER TABLE "User"
+ADD COLUMN IF NOT EXISTS "subscriptionTier" TEXT NOT NULL DEFAULT 'free';
+```
+
+Observacao: o fallback acima serve apenas para emergencia. O caminho correto continua sendo `npx prisma migrate deploy`.
+
+## Neon
+
+Checklist de conexao:
+
+- usar a string pooled em `DATABASE_URL`
+- usar a string direta em `DIRECT_URL`
+- validar com `npx prisma validate`
+- conferir status com `npx prisma migrate status`
+
+Comandos uteis:
+
+```bash
+npx prisma validate
+npx prisma generate
+npx prisma migrate status
+npx prisma migrate deploy
 ```
 
 ## Deploy na Vercel
 
-1. Suba o repositorio no GitHub.
-2. Importe o projeto na Vercel.
-3. Defina as variaveis `DATABASE_URL`, `JWT_SECRET` e `OPENAI_API_KEY`.
-4. Garanta que o banco Neon esteja acessivel.
-5. Configure o comando de build padrao: `npm run build`.
-6. Rode as migracoes em producao:
+Variaveis obrigatorias em `Production`:
 
-```bash
-npx prisma migrate deploy
-```
+- `DATABASE_URL`
+- `DIRECT_URL`
+- `JWT_SECRET`
 
-## IA e fallback
-
-Os endpoints:
-
-- `/api/ai/insight`
-- `/api/ai/weekly-review`
-- `/api/ai/monthly-review`
-
-ja funcionam sem OpenAI configurada. Eles analisam diario, metas e revisoes e retornam:
-
-- resumo
-- foco sugerido
-- alerta de padrao negativo
-- recomendacao pratica
-
-Hoje o retorno usa fallback local. A camada de prompt e contexto ja esta separada em `lib/ai.ts` para conectar OpenAI depois.
-
-## Checklist de producao
-
-- Definir `JWT_SECRET` forte
-- Trocar seed demo por processo de onboarding real
-- Criar migracoes versionadas em `prisma/migrations`
-- Adicionar rate limiting em auth e endpoints de IA
-- Adicionar observabilidade e logs estruturados
-- Mover JWT para rotacao ou sessao persistida se houver requisitos enterprise
-- Adicionar reset de senha e verificacao de email
-- Adicionar CSRF hardening se houver expansao de superficie de sessao
-- Conectar OpenAI com retries, timeout e auditoria de uso
-- Cobrir API routes e fluxo auth com testes
-
-## Validacao
-
-Build validado localmente com:
+Fluxo de deploy:
 
 ```bash
 npm run build
+npx prisma generate
+npx prisma migrate deploy
+vercel --prod
 ```
+
+Notas:
+
+- o projeto usa `postinstall` com `prisma generate`
+- a Vercel deve executar o build padrao `npm run build`
+- as migrations de producao devem rodar com `DIRECT_URL`
+
+## Validacao
+
+Comandos usados para validar a configuracao:
+
+```bash
+npx prisma validate
+npx prisma generate
+npx prisma migrate status
+npm run build
+```
+
+## Credencial demo do seed
+
+- Email: `demo@evolua.ai`
+- Senha: `12345678`

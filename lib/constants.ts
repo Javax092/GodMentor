@@ -10,6 +10,9 @@ type PillarKeyValue =
   | "DISCIPLINE"
   | "REFLECTION";
 type SubscriptionTierKey = "FREE" | "PRO" | "ELITE";
+type MissionStatusKey = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "SKIPPED";
+type MissionPriorityKey = "LOW" | "MEDIUM" | "HIGH";
+type DailyMissionCategoryKey = "estudo" | "treino" | "vendas" | "conteudo" | "saude" | "foco" | "pessoal";
 
 export const APP_NAME = "Evolua AI";
 export const AUTH_COOKIE = "evolua_token";
@@ -53,6 +56,29 @@ export const goalPeriodLabels = {
   WEEKLY: "Semanal",
   MONTHLY: "Mensal"
 } as const;
+
+export const missionStatusLabels = {
+  PENDING: "Pendente",
+  IN_PROGRESS: "Em progresso",
+  COMPLETED: "Concluída",
+  SKIPPED: "Ignorada"
+} as const satisfies Record<MissionStatusKey, string>;
+
+export const missionPriorityLabels = {
+  LOW: "Baixa",
+  MEDIUM: "Média",
+  HIGH: "Alta"
+} as const satisfies Record<MissionPriorityKey, string>;
+
+export const dailyMissionCategoryLabels = {
+  estudo: "Estudo",
+  treino: "Treino",
+  vendas: "Vendas",
+  conteudo: "Conteúdo",
+  saude: "Saúde",
+  foco: "Foco",
+  pessoal: "Pessoal"
+} as const satisfies Record<DailyMissionCategoryKey, string>;
 
 export const moodOptions = ["Inspirado", "Focado", "Equilibrado", "Cansado", "Ansioso", "Grato"] as const;
 

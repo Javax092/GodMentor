@@ -14,7 +14,10 @@ export default async function AiPage() {
     <div className="space-y-6">
       <div>
         <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Mentor IA</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-white">Sua IA como mentor, analista e coach de disciplina</h1>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-white">Menos conselho genérico. Mais direção baseada no seu comportamento.</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300">
+          A IA observa seus registros, metas e missões para sugerir próximos passos, alertar padrões e ajustar sua direção.
+        </p>
       </div>
       <section className="grid gap-4 xl:grid-cols-2">
         <AiMentorCard title={cards[0]?.title ?? "Resumo diário"} content={cards[0]?.content ?? "Sem insights suficientes ainda."} />

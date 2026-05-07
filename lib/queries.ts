@@ -66,6 +66,7 @@ export async function getAppOverview(userId: string) {
     focusSessions,
     xpEvents,
     goals,
+    userMissions,
     aiInsights,
     weeklyReviews,
     monthlyReviews,
@@ -107,6 +108,11 @@ export async function getAppOverview(userId: string) {
       where: { userId },
       orderBy: [{ status: "asc" }, { priority: "desc" }, { updatedAt: "desc" }],
       include: { pillar: true }
+    }),
+    prisma.userMission.findMany({
+      where: { userId },
+      include: { pillar: true, history: { orderBy: { createdAt: "desc" }, take: 5 } },
+      orderBy: [{ status: "asc" }, { priority: "desc" }, { dueDate: "asc" }, { updatedAt: "desc" }]
     }),
     prisma.aiInsight.findMany({
       where: { userId },
@@ -191,7 +197,10 @@ export async function getAppOverview(userId: string) {
     };
   });
 
-  const missionsCompletedToday = missionsToday.filter((mission) => mission.status === MissionStatus.COMPLETED).length;
+  const userMissionsCompletedToday = userMissions.filter(
+    (mission) => mission.completedAt && isSameDay(mission.completedAt, today)
+  ).length;
+  const missionsCompletedToday = missionsToday.filter((mission) => mission.status === MissionStatus.COMPLETED).length + userMissionsCompletedToday;
   const activeMissionCount = missionsToday.length;
   const checkInsThisWeek = checkIns.filter((checkIn) => checkIn.date >= weekStart && checkIn.date <= weekEnd);
   const previousWeekCheckIns = checkIns.filter((checkIn) => checkIn.date >= previousWeekStart && checkIn.date <= previousWeekEnd);
@@ -200,7 +209,11 @@ export async function getAppOverview(userId: string) {
   const weekCompletedMissions = weekMissionItems.filter((item) => item.status === MissionStatus.COMPLETED).length;
   const previousWeekCompletedMissions = previousWeekMissionItems.filter((item) => item.status === MissionStatus.COMPLETED).length;
   const todayCheckIn = checkIns.find((checkIn) => isSameDay(checkIn.date, today)) ?? null;
-  const streakDates = checkIns.map((checkIn) => checkIn.date);
+  const streakDates = [
+    ...checkIns.map((checkIn) => checkIn.date),
+    ...recentDailyMissions.filter((item) => item.status === MissionStatus.COMPLETED).map((item) => item.date),
+    ...userMissions.filter((mission) => mission.completedAt).map((mission) => mission.completedAt as Date)
+  ];
   const currentStreak = calculateStreak(streakDates, today);
   const bestStreak = Math.max(
     calculateBestStreak(streakDates),
@@ -245,6 +258,10 @@ export async function getAppOverview(userId: string) {
   const topGoal = goalsActive[0] ?? null;
   const activeGoalWithPillar = goalsActive.find((goal) => goal.pillar && activePillarKeys.has(goal.pillar.key));
   const focusWeeklyLabel = activeGoalWithPillar?.title ?? todayCheckIn?.improveTomorrow ?? "Definir a frente principal";
+  const recommendedMission =
+    userMissions.find((mission) => mission.status !== MissionStatus.COMPLETED) ??
+    missionsToday.find((mission) => mission.status !== MissionStatus.COMPLETED) ??
+    null;
   const pillarsProgress = activePillars.map((pillar) => {
     const missionTemplate = missionsToday.find((mission) => mission.pillarId === pillar.id);
     const pillarCheckins = recentDailyMissions.filter((item) => item.pillarId === pillar.id);
@@ -437,6 +454,8 @@ export async function getAppOverview(userId: string) {
     hero: dashboardHero,
     kpis,
     missionsToday,
+    userMissions,
+    recommendedMission,
     goals,
     pillarsProgress,
     focus: focusSessionSummary,

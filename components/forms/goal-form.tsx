@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Goal, GoalCategory, GoalPeriod, GoalPriority, GoalStatus } from "@prisma/client";
+import { useToast } from "@/components/app/toast-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FormSection } from "@/components/app/form-section";
 import { goalCategoryLabels, goalPeriodLabels, goalPriorityLabels, goalStatusLabels } from "@/lib/constants";
 
-export function GoalForm({ goal }: { goal?: Goal }) {
+export function GoalForm({ goal, onSuccess }: { goal?: Goal; onSuccess?: () => void }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [category, setCategory] = useState<GoalCategory>(goal?.category ?? GoalCategory.PERSONAL);
@@ -45,13 +47,24 @@ export function GoalForm({ goal }: { goal?: Goal }) {
 
     if (!response.ok) {
       setError(data.error ?? "Não foi possível salvar.");
+      showToast({
+        tone: "error",
+        title: "Não foi possível salvar a meta",
+        description: data.error ?? "Revise os dados e tente novamente."
+      });
       return;
     }
 
+    showToast({
+      tone: "success",
+      title: goal ? "Meta atualizada" : "Meta criada",
+      description: goal ? "As alterações foram salvas." : "Sua nova meta já está disponível no painel."
+    });
     router.refresh();
     if (!goal) {
       form.reset();
     }
+    onSuccess?.();
   }
 
   return (
